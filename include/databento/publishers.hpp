@@ -109,6 +109,8 @@ enum class Venue : std::uint16_t {
   Xeur = 50,
   // European Energy Exchange
   Xeee = 51,
+  // Cboe Futures Exchange
+  Xcbf = 52,
 };
 
 // A source of data.
@@ -191,6 +193,8 @@ enum class Dataset : std::uint16_t {
   XeurEobi = 38,
   // European Energy Exchange EOBI
   XeeeEobi = 39,
+  // Cboe Futures Exchange PITCH
+  XcbfPitch = 40,
 };
 
 // A specific Venue from a specific data source.
@@ -403,6 +407,8 @@ enum class Publisher : std::uint16_t {
   XeurEobiXoff = 103,
   // European Energy Exchange EOBI - Off-Market Trades
   XeeeEobiXoff = 104,
+  // Cboe Futures Exchange
+  XcbfPitchXcbf = 105,
 };
 
 // Get a Publisher's Venue.

@@ -164,6 +164,9 @@ const char* ToString(Venue venue) {
     case Venue::Xeee: {
       return "XEEE";
     }
+    case Venue::Xcbf: {
+      return "XCBF";
+    }
     default: {
       return "Unknown";
     }
@@ -330,6 +333,9 @@ Venue FromString(const std::string& str) {
   if (str == "XEEE") {
     return Venue::Xeee;
   }
+  if (str == "XCBF") {
+    return Venue::Xcbf;
+  }
   throw InvalidArgumentError{"FromString<Venue>", "str",
                              "unknown value '" + str + '\''};
 }
@@ -452,6 +458,9 @@ const char* ToString(Dataset dataset) {
     }
     case Dataset::XeeeEobi: {
       return "XEEE.EOBI";
+    }
+    case Dataset::XcbfPitch: {
+      return "XCBF.PITCH";
     }
     default: {
       return "Unknown";
@@ -582,6 +591,9 @@ Dataset FromString(const std::string& str) {
   }
   if (str == "XEEE.EOBI") {
     return Dataset::XeeeEobi;
+  }
+  if (str == "XCBF.PITCH") {
+    return Dataset::XcbfPitch;
   }
   throw InvalidArgumentError{"FromString<Dataset>", "str",
                              "unknown value '" + str + '\''};
@@ -900,6 +912,9 @@ Venue PublisherVenue(Publisher publisher) {
     }
     case Publisher::XeeeEobiXoff: {
       return Venue::Xoff;
+    }
+    case Publisher::XcbfPitchXcbf: {
+      return Venue::Xcbf;
     }
     default: {
       throw InvalidArgumentError{
@@ -1223,6 +1238,9 @@ Dataset PublisherDataset(Publisher publisher) {
     case Publisher::XeeeEobiXoff: {
       return Dataset::XeeeEobi;
     }
+    case Publisher::XcbfPitchXcbf: {
+      return Dataset::XcbfPitch;
+    }
     default: {
       throw InvalidArgumentError{
           "PublisherDataset", "publisher",
@@ -1545,6 +1563,9 @@ const char* ToString(Publisher publisher) {
     }
     case Publisher::XeeeEobiXoff: {
       return "XEEE.EOBI.XOFF";
+    }
+    case Publisher::XcbfPitchXcbf: {
+      return "XCBF.PITCH.XCBF";
     }
     default: {
       return "Unknown";
@@ -1870,6 +1891,9 @@ Publisher FromString(const std::string& str) {
   }
   if (str == "XEEE.EOBI.XOFF") {
     return Publisher::XeeeEobiXoff;
+  }
+  if (str == "XCBF.PITCH.XCBF") {
+    return Publisher::XcbfPitchXcbf;
   }
   throw InvalidArgumentError{"FromString<Publisher>", "str",
                              "unknown value '" + str + '\''};
