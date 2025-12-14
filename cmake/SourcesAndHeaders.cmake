@@ -10,6 +10,7 @@ set(headers
   include/databento/detail/buffer.hpp
   include/databento/detail/dbn_buffer_decoder.hpp
   include/databento/detail/http_client.hpp
+  include/databento/detail/http_types.hpp
   include/databento/detail/json_helpers.hpp
   include/databento/detail/scoped_fd.hpp
   include/databento/detail/scoped_thread.hpp
@@ -42,6 +43,13 @@ set(headers
   src/stream_op_helper.hpp
 )
 
+# Add HTTP backend-specific headers
+if(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO)
+  list(APPEND headers include/databento/detail/http_client_asio.hpp)
+else()
+  list(APPEND headers include/databento/detail/http_client_httplib.hpp)
+endif()
+
 set(sources
   src/batch.cpp
   src/datetime.cpp
@@ -52,7 +60,6 @@ set(sources
   src/dbn_file_store.cpp
   src/detail/buffer.cpp
   src/detail/dbn_buffer_decoder.cpp
-  src/detail/http_client.cpp
   src/detail/json_helpers.cpp
   src/detail/scoped_fd.cpp
   src/detail/sha256_hasher.cpp
@@ -76,3 +83,10 @@ set(sources
   src/v1.cpp
   src/v2.cpp
 )
+
+# Add HTTP backend-specific sources
+if(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO)
+  list(APPEND sources src/detail/http_client_asio.cpp)
+else()
+  list(APPEND sources src/detail/http_client_httplib.cpp)
+endif()

@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
-#define CPPHTTPLIB_OPENSSL_SUPPORT
-#endif
-#include <httplib.h>          // Error
 #include <nlohmann/json.hpp>  // json, parse_error
 
 #include <cstdint>
@@ -11,6 +7,15 @@
 #include <string>
 #include <string_view>
 #include <utility>  // move
+
+#include "databento/detail/http_types.hpp"  // HttpError
+
+#ifdef DATABENTO_HAS_HTTPLIB
+#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#endif
+#include <httplib.h>  // Error
+#endif
 
 namespace databento {
 // Base class for all databento client library exceptions.
@@ -27,20 +32,34 @@ class Exception : public std::exception {
 
 class HttpRequestError : public Exception {
  public:
-  HttpRequestError(std::string request_path, httplib::Error error_code)
+  HttpRequestError(std::string request_path, detail::HttpError error_code)
       : Exception{BuildMessage(request_path, error_code)},
         request_path_{std::move(request_path)},
         error_code_{error_code} {}
 
+#ifdef DATABENTO_HAS_HTTPLIB
+  // Backward compatibility constructor for httplib::Error
+  HttpRequestError(std::string request_path, httplib::Error error_code)
+      : Exception{BuildMessage(request_path, error_code)},
+        request_path_{std::move(request_path)},
+        error_code_{ToHttpError(error_code)} {}
+#endif
+
   const std::string& RequestPath() const { return request_path_; }
-  httplib::Error ErrorCode() const { return error_code_; }
+  detail::HttpError ErrorCode() const { return error_code_; }
 
  private:
   static std::string BuildMessage(std::string_view request_path,
+                                  detail::HttpError error_code);
+
+#ifdef DATABENTO_HAS_HTTPLIB
+  static std::string BuildMessage(std::string_view request_path,
                                   httplib::Error error_code);
+  static detail::HttpError ToHttpError(httplib::Error error);
+#endif
 
   const std::string request_path_;
-  const httplib::Error error_code_;
+  const detail::HttpError error_code_;
 };
 
 // Exception indicating a 4XX or 5XX HTTP status code was received from the

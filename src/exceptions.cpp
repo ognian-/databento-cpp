@@ -11,11 +11,59 @@
 using databento::HttpRequestError;
 
 std::string HttpRequestError::BuildMessage(std::string_view request_path,
+                                           detail::HttpError error_code) {
+  std::ostringstream err_msg;
+  err_msg << "Request to " << request_path << " failed with "
+          << detail::ToString(error_code);
+  return err_msg.str();
+}
+
+#ifdef DATABENTO_HAS_HTTPLIB
+std::string HttpRequestError::BuildMessage(std::string_view request_path,
                                            httplib::Error error_code) {
   std::ostringstream err_msg;
   err_msg << "Request to " << request_path << " failed with " << error_code;
   return err_msg.str();
 }
+
+databento::detail::HttpError HttpRequestError::ToHttpError(
+    httplib::Error error) {
+  switch (error) {
+    case httplib::Error::Success:
+      return detail::HttpError::Success;
+    case httplib::Error::Unknown:
+      return detail::HttpError::Unknown;
+    case httplib::Error::Connection:
+      return detail::HttpError::Connection;
+    case httplib::Error::BindIPAddress:
+      return detail::HttpError::BindIPAddress;
+    case httplib::Error::Read:
+      return detail::HttpError::Read;
+    case httplib::Error::Write:
+      return detail::HttpError::Write;
+    case httplib::Error::ExceedRedirectCount:
+      return detail::HttpError::ExceedRedirectCount;
+    case httplib::Error::Canceled:
+      return detail::HttpError::Canceled;
+    case httplib::Error::SSLConnection:
+      return detail::HttpError::SSLConnection;
+    case httplib::Error::SSLLoadingCerts:
+      return detail::HttpError::SSLLoadingCerts;
+    case httplib::Error::SSLServerVerification:
+      return detail::HttpError::SSLServerVerification;
+    case httplib::Error::UnsupportedMultipartBoundaryChars:
+      return detail::HttpError::UnsupportedMultipartBoundaryChars;
+    case httplib::Error::Compression:
+      return detail::HttpError::Compression;
+    case httplib::Error::ConnectionTimeout:
+      return detail::HttpError::ConnectionTimeout;
+    case httplib::Error::ProxyConnection:
+      return detail::HttpError::ProxyConnection;
+    default:
+      return detail::HttpError::Unknown;
+  }
+}
+#endif
 
 using databento::TcpError;
 

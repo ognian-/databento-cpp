@@ -168,29 +168,39 @@ else()
   # Ignore compiler warnings in headers
   add_system_include_property(nlohmann_json)
 endif()
-# cpp-httplib
-if(${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_HTTPLIB)
-  # Check if httplib target already exists
-  if(TARGET httplib::httplib)
-    get_target_property(HTTPLIB_SOURCE_DIR httplib::httplib SOURCE_DIR)
-    message(STATUS "httplib::httplib already available as a target at ${HTTPLIB_SOURCE_DIR}")
-    get_target_property(HTTPLIB_INCLUDE_DIRS httplib::httplib INTERFACE_INCLUDE_DIRECTORIES)
-    if(HTTPLIB_INCLUDE_DIRS)
-      message(STATUS "httplib::httplib include directories: ${HTTPLIB_INCLUDE_DIRS}")
-    endif()
-  else()
-    find_package(httplib REQUIRED)
+# HTTP backend selection
+if(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO)
+  message(STATUS "Using Boost.Asio/Beast HTTP backend")
+  find_package(Boost 1.74 REQUIRED)
+  if(Boost_FOUND)
+    message(STATUS "Found Boost ${Boost_VERSION} at ${Boost_INCLUDE_DIRS}")
   endif()
 else()
-  set(httplib_version 0.28.0)
-  FetchContent_Declare(
-    httplib
-    URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v${httplib_version}.tar.gz
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-  )
-  FetchContent_MakeAvailable(httplib)
-  # Ignore compiler warnings in headers
-  add_system_include_property(httplib)
+  message(STATUS "Using cpp-httplib HTTP backend")
+  # cpp-httplib
+  if(${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_HTTPLIB)
+    # Check if httplib target already exists
+    if(TARGET httplib::httplib)
+      get_target_property(HTTPLIB_SOURCE_DIR httplib::httplib SOURCE_DIR)
+      message(STATUS "httplib::httplib already available as a target at ${HTTPLIB_SOURCE_DIR}")
+      get_target_property(HTTPLIB_INCLUDE_DIRS httplib::httplib INTERFACE_INCLUDE_DIRECTORIES)
+      if(HTTPLIB_INCLUDE_DIRS)
+        message(STATUS "httplib::httplib include directories: ${HTTPLIB_INCLUDE_DIRS}")
+      endif()
+    else()
+      find_package(httplib REQUIRED)
+    endif()
+  else()
+    set(httplib_version 0.28.0)
+    FetchContent_Declare(
+      httplib
+      URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v${httplib_version}.tar.gz
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(httplib)
+    # Ignore compiler warnings in headers
+    add_system_include_property(httplib)
+  endif()
 endif()
 # date
 if(${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_DATE)
@@ -221,22 +231,41 @@ target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC
     date::date
-    httplib::httplib
     nlohmann_json::nlohmann_json
     OpenSSL::Crypto
     OpenSSL::SSL
     Threads::Threads
     zstd::libzstd
-    # macOS-specific libraries required by httplib
-    $<$<PLATFORM_ID:Darwin>:${CFNETWORK_LIB}>
-    $<$<PLATFORM_ID:Darwin>:${CORE_FRAMEWORK_LIB}>
 )
 
-target_compile_definitions(
-  ${PROJECT_NAME}
-  PUBLIC
-    CPPHTTPLIB_OPENSSL_SUPPORT
-)
+# HTTP backend-specific linking
+if(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO)
+  target_link_libraries(
+    ${PROJECT_NAME}
+    PUBLIC
+      Boost::boost
+  )
+  target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
+      DATABENTO_HTTP_BACKEND_ASIO
+  )
+else()
+  target_link_libraries(
+    ${PROJECT_NAME}
+    PUBLIC
+      httplib::httplib
+      # macOS-specific libraries required by httplib
+      $<$<PLATFORM_ID:Darwin>:${CFNETWORK_LIB}>
+      $<$<PLATFORM_ID:Darwin>:${CORE_FRAMEWORK_LIB}>
+  )
+  target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
+      CPPHTTPLIB_OPENSSL_SUPPORT
+      DATABENTO_HAS_HTTPLIB
+  )
+endif()
 
 verbose_message("Successfully added all dependencies and linked against them.")
 
@@ -278,7 +307,7 @@ set(targets ${PROJECT_NAME})
 if(NOT ${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_JSON)
   list(APPEND targets nlohmann_json)
 endif()
-if(NOT ${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_HTTPLIB)
+if(NOT ${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO AND NOT ${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_HTTPLIB)
   list(APPEND targets httplib)
 endif()
 

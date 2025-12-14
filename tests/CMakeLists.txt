@@ -141,6 +141,25 @@ endif()
 
 
 #
+# Mock server backend: use Boost.Beast when Asio backend is enabled, otherwise use httplib
+#
+if(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO)
+  # Mock server uses Boost.Beast, which is already available from parent project
+  target_compile_definitions(${PROJECT_NAME} PRIVATE DATABENTO_HTTP_BACKEND_ASIO)
+  target_link_libraries(${PROJECT_NAME} PUBLIC Boost::boost)
+else()
+  # Use cpp-httplib for mock server
+  include(FetchContent)
+  FetchContent_Declare(
+    httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.18.3
+  )
+  FetchContent_MakeAvailable(httplib)
+  target_link_libraries(${PROJECT_NAME} PUBLIC httplib::httplib)
+endif()
+
+#
 # Add the unit tests
 #
 

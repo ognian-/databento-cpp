@@ -1,10 +1,11 @@
 #include "databento/historical.hpp"
 
-#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
-#define CPPHTTPLIB_OPENSSL_SUPPORT
-#endif
-#include <httplib.h>
 #include <nlohmann/json.hpp>
+
+// Include the HTTP client which provides the backend-specific types
+#include "databento/detail/http_client.hpp"
+// Include common HTTP types (HttpRange, MakeRangeHeader)
+#include "databento/detail/http_types.hpp"
 
 #include <algorithm>  // find_if
 #include <cstddef>    // size_t
@@ -122,7 +123,8 @@ void TryCreateDir(const std::filesystem::path& dir_name) {
 }
 
 struct AlreadyDownloaded {};
-using FileExistsResult = std::variant<AlreadyDownloaded, std::optional<httplib::Range>>;
+using FileExistsResult =
+    std::variant<AlreadyDownloaded, std::optional<databento::detail::HttpRange>>;
 
 FileExistsResult CheckIfFileExists(
     databento::ILogReceiver* log_receiver, const std::filesystem::path& output_path,
@@ -150,7 +152,8 @@ FileExistsResult CheckIfFileExists(
       }
     }
 
-    return httplib::Range{actual_size, -1};
+    return databento::detail::HttpRange{
+        static_cast<std::int64_t>(actual_size), -1};
   }
   if (actual_size == exp_size) {
     if (log_receiver->ShouldLog(databento::LogLevel::Debug)) {
@@ -445,11 +448,12 @@ void Historical::DownloadFile(const std::string& url,
     if (std::holds_alternative<AlreadyDownloaded>(exists_res)) {
       return;
     }
-    httplib::Headers http_headers;
-    const auto opt_range = std::get<std::optional<httplib::Range>>(exists_res);
+    detail::HttpHeaders http_headers;
+    const auto opt_range =
+        std::get<std::optional<detail::HttpRange>>(exists_res);
     std::ios::openmode mode = std::ios::binary;
     if (opt_range) {
-      auto [key, val] = httplib::make_range_header({*opt_range});
+      auto [key, val] = detail::MakeRangeHeader(*opt_range);
       http_headers.emplace(std::move(key), std::move(val));
       // `ate` **and** `in` required to properly append
       mode |= std::ios::in | std::ios::ate;

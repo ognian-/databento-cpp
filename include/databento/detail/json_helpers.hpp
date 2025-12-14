@@ -13,6 +13,8 @@
 #include "databento/enums.hpp"       // FromString
 #include "databento/exceptions.hpp"  // JsonResponseError
 
+// Forward declare httplib::Params for compatibility
+// The actual type comes from the selected HTTP backend
 namespace httplib {
 using Params = std::multimap<std::string, std::string>;
 }

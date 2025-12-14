@@ -8,6 +8,11 @@ option(${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_HTTPLIB "Use an external httplib l
 option(${PROJECT_NAME_UPPERCASE}_USE_EXTERNAL_GTEST "Use an external google test (gtest) library" ON)
 
 #
+# HTTP backend selection
+#
+option(${PROJECT_NAME_UPPERCASE}_HTTP_BACKEND_ASIO "Use Boost.Asio/Beast HTTP backend instead of cpp-httplib" OFF)
+
+#
 # Compiler options
 #
 

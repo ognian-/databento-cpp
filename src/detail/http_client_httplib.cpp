@@ -1,9 +1,9 @@
-#include "databento/detail/http_client.hpp"
+#include "databento/detail/http_client_httplib.hpp"
 
 #include <chrono>   // seconds
 #include <sstream>  // ostringstream
 
-#include "databento/constants.hpp"  // kUserAgent
+#include "databento/constants.hpp"   // kUserAgent
 #include "databento/exceptions.hpp"  // HttpResponseError, HttpRequestError, JsonResponseError
 #include "databento/log.hpp"         // ILogReceiver, LogLevel
 
@@ -15,8 +15,8 @@ const httplib::Headers HttpClient::kHeaders{
     {"user-agent", kUserAgent},
 };
 
-HttpClient::HttpClient(databento::ILogReceiver* log_receiver, const std::string& key,
-                       const std::string& gateway)
+HttpClient::HttpClient(databento::ILogReceiver* log_receiver,
+                       const std::string& key, const std::string& gateway)
     : log_receiver_{log_receiver}, client_{gateway} {
   client_.set_default_headers(HttpClient::kHeaders);
   client_.set_basic_auth(key, "");
@@ -24,8 +24,9 @@ HttpClient::HttpClient(databento::ILogReceiver* log_receiver, const std::string&
   client_.set_write_timeout(kTimeout);
 }
 
-HttpClient::HttpClient(databento::ILogReceiver* log_receiver, const std::string& key,
-                       const std::string& gateway, std::uint16_t port)
+HttpClient::HttpClient(databento::ILogReceiver* log_receiver,
+                       const std::string& key, const std::string& gateway,
+                       std::uint16_t port)
     : log_receiver_{log_receiver}, client_{gateway, port} {
   client_.set_default_headers(HttpClient::kHeaders);
   client_.set_basic_auth(key, "");
@@ -34,20 +35,22 @@ HttpClient::HttpClient(databento::ILogReceiver* log_receiver, const std::string&
 }
 
 nlohmann::json HttpClient::GetJson(const std::string& path,
-                                   const httplib::Params& params) {
+                                   const HttpParams& params) {
+  // HttpParams is compatible with httplib::Params
   httplib::Result res = client_.Get(path, params, httplib::Headers{});
   return HttpClient::CheckAndParseResponse(path, std::move(res));
 }
 
 nlohmann::json HttpClient::PostJson(const std::string& path,
-                                    const httplib::Params& form_params) {
+                                    const HttpParams& form_params) {
   // params will be encoded as form data
   httplib::Result res = client_.Post(path, {}, form_params);
   return HttpClient::CheckAndParseResponse(path, std::move(res));
 }
 
-void HttpClient::GetRawStream(const std::string& path, const httplib::Headers& headers,
-                              const httplib::ContentReceiver& callback) {
+void HttpClient::GetRawStream(const std::string& path,
+                              const HttpHeaders& headers,
+                              const ContentReceiver& callback) {
   std::string err_body{};
   int err_status{};
   const httplib::Result res = client_.Get(
@@ -65,8 +68,8 @@ void HttpClient::GetRawStream(const std::string& path, const httplib::Headers& h
 }
 
 void HttpClient::PostRawStream(const std::string& path,
-                               const httplib::Params& form_params,
-                               const httplib::ContentReceiver& callback) {
+                               const HttpParams& form_params,
+                               const ContentReceiver& callback) {
   std::string err_body{};
   int err_status{};
   httplib::Request req;

@@ -1,27 +1,38 @@
 #pragma once
 
-#include <httplib.h>
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <vector>
 
 #include "databento/detail/buffer.hpp"
 #include "databento/detail/scoped_thread.hpp"
 #include "databento/record.hpp"
 
+#ifdef DATABENTO_HTTP_BACKEND_ASIO
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#else
+#include <httplib.h>
+#endif
+
 namespace databento::tests::mock {
+
 class MockHttpServer {
  public:
-  explicit MockHttpServer(std::string api_key)
-      : port_{server_.bind_to_any_port("localhost")}, api_key_{std::move(api_key)} {}
+  explicit MockHttpServer(std::string api_key);
   MockHttpServer(MockHttpServer&&) = delete;
   MockHttpServer& operator=(MockHttpServer&&) = delete;
   MockHttpServer(const MockHttpServer&) = delete;
   MockHttpServer& operator=(const MockHttpServer&) = delete;
-  ~MockHttpServer() { server_.stop(); }
+  ~MockHttpServer();
 
   int ListenOnThread();
   void MockBadPostRequest(const std::string& path, const nlohmann::json& json);
@@ -44,26 +55,47 @@ class MockHttpServer {
   void MockPostDbn(const std::string& path,
                    const std::map<std::string, std::string>& params, Record record,
                    std::size_t count, std::size_t extra_bytes, std::size_t chunk_size);
-
-  void MockGetDbnFile(const std::string& path,
-
-                      const std::string& dbn_path);
+  void MockGetDbnFile(const std::string& path, const std::string& dbn_path);
 
  private:
   using SharedConstBuffer = std::shared_ptr<const detail::Buffer>;
 
-  static void CheckParams(const std::map<std::string, std::string>& params,
-                          const httplib::Request& req);
-  static void CheckFormParams(const std::map<std::string, std::string>& params,
-                              const httplib::Request& req);
+  static std::string UrlDecode(const std::string& str);
+  static std::map<std::string, std::string> ParseQueryParams(const std::string& query);
+  static std::map<std::string, std::string> ParseFormParams(const std::string& body);
+  static void CheckParams(const std::map<std::string, std::string>& expected,
+                          const std::map<std::string, std::string>& actual);
   static SharedConstBuffer EncodeToBuffer(const std::string& dbn_path);
-  static httplib::Server::Handler MakeDbnStreamHandler(
-      const std::map<std::string, std::string>& params, SharedConstBuffer&& buffer,
-      std::size_t chunk_size);
 
-  httplib::Server server_{};
-  const int port_{};
-  detail::ScopedThread listen_thread_;
+#ifdef DATABENTO_HTTP_BACKEND_ASIO
+  using tcp = boost::asio::ip::tcp;
+
+  struct RouteHandler {
+    enum class Method { Get, Post };
+    Method method;
+    std::string path;
+    std::function<void(const boost::beast::http::request<boost::beast::http::string_body>&,
+                       boost::beast::http::response<boost::beast::http::string_body>&)>
+        handler;
+  };
+
+  void RunServer();
+  void HandleConnection(tcp::socket socket);
+  void Stop();
+
+  boost::asio::io_context io_context_;
+  tcp::acceptor acceptor_;
+  int port_{0};
   std::string api_key_;
+  std::vector<RouteHandler> routes_;
+  std::mutex routes_mutex_;
+  detail::ScopedThread listen_thread_;
+  std::atomic<bool> running_{false};
+#else
+  httplib::Server server_;
+  std::string api_key_;
+  detail::ScopedThread listen_thread_;
+#endif
 };
+
 }  // namespace databento::tests::mock
